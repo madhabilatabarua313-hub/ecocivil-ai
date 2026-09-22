@@ -132,7 +132,7 @@ elif navigation == "Rainwater Harvesting Design":
 # ----------------------------------------------------
 # MODULE 3: BIOCHAR & SUSTAINABLE MATERIALS
 # ----------------------------------------------------
-elif selected_module == "Biochar & Sustainable Materials":
+if selected_module == "Biochar & Sustainable Materials":
     st.subheader("🌍 Sustainable Construction Materials & Carbon Sequestration")
     st.markdown("Estimate quantities for biochar applications, recycled coarse aggregates, and supplementary cementitious materials.")
     
@@ -153,26 +153,24 @@ elif selected_module == "Biochar & Sustainable Materials":
         with col2:
             app_rate = st.number_input("Application Rate (kg/sq. m)", min_value=0.1, value=2.0, step=0.1)
             
-        # Feedstock type selection based on carbon content characteristics
         feedstock = st.selectbox(
             "Select Biochar Feedstock Type",
             [
-                "Woody Biomass (High Carbon: 70% - 90%)[cite: 1]", 
-                "Crop Residues / Manure (Lower Carbon: 30% - 60%)[cite: 1]"
+                "Woody Biomass (High Carbon: 70% - 90%)", 
+                "Crop Residues / Manure (Lower Carbon: 30% - 60%)"
             ]
         )
         
-        # Determine carbon content factor based on feedstock selection
         if "Woody Biomass" in feedstock:
-            carbon_fraction = 0.80  # Average 80% for woody biomass
+            carbon_fraction = 0.80
         else:
-            carbon_fraction = 0.45  # Average 45% for crop residues/manure
+            carbon_fraction = 0.45
             
         total_biochar = land_area * app_rate
         total_carbon_seq = total_biochar * carbon_fraction
         
         st.success(f"🌱 Total Biochar Required for Soil Amendment: **{total_biochar:,.2f} kg**")
-        st.info(f"🛡️ Estimated Long-term Carbon Sequestered: **{total_carbon_seq:,.2f} kg** (Based on selected feedstock profile[cite: 1])")
+        st.info(f"🛡️ Estimated Long-term Carbon Sequestered: **{total_carbon_seq:,.2f} kg** (Based on selected feedstock profile)")
 
     elif mat_type == "Biochar: Concrete Cement Replacement":
         conc_vol = st.number_input("Concrete Volume (CFT)", min_value=10.0, value=500.0, step=10.0)
