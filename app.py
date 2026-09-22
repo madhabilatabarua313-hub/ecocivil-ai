@@ -132,50 +132,69 @@ elif navigation == "Rainwater Harvesting Design":
 # ----------------------------------------------------
 # MODULE 3: BIOCHAR & SUSTAINABLE MATERIALS
 # ----------------------------------------------------
-elif navigation == "Biochar & Sustainable Materials":
-    st.header("🌍 Sustainable Construction Materials & Carbon Sequestration")
+elif selected_module == "Biochar & Sustainable Materials":
+    st.subheader("🌍 Sustainable Construction Materials & Carbon Sequestration")
     st.markdown("Estimate quantities for biochar applications, recycled coarse aggregates, and supplementary cementitious materials.")
-
-    mat_choice = st.selectbox(
-        "Select Sustainable Material Estimator", 
+    
+    mat_type = st.selectbox(
+        "Select Sustainable Material Estimator",
         [
-            "Biochar: Soil Amendment", 
-            "Biochar: Concrete Admixture (Cement Replacement)", 
-            "Recycled Aggregate (RCA) in Concrete", 
-            "Fly Ash / SCM Supplementary Cement"
+            "Biochar: Soil Amendment & Carbon Sequestration", 
+            "Biochar: Concrete Cement Replacement", 
+            "Recycled Concrete Aggregate (RCA)", 
+            "Fly Ash / SCM Replacement"
         ]
     )
     
-    material_summary_str = ""
+    if mat_type == "Biochar: Soil Amendment & Carbon Sequestration":
+        col1, col2 = st.columns(2)
+        with col1:
+            land_area = st.number_input("Land Area (sq. m)", min_value=10.0, value=500.0, step=10.0)
+        with col2:
+            app_rate = st.number_input("Application Rate (kg/sq. m)", min_value=0.1, value=2.0, step=0.1)
+            
+        # Feedstock type selection based on carbon content characteristics
+        feedstock = st.selectbox(
+            "Select Biochar Feedstock Type",
+            [
+                "Woody Biomass (High Carbon: 70% - 90%)[cite: 1]", 
+                "Crop Residues / Manure (Lower Carbon: 30% - 60%)[cite: 1]"
+            ]
+        )
+        
+        # Determine carbon content factor based on feedstock selection
+        if "Woody Biomass" in feedstock:
+            carbon_fraction = 0.80  # Average 80% for woody biomass
+        else:
+            carbon_fraction = 0.45  # Average 45% for crop residues/manure
+            
+        total_biochar = land_area * app_rate
+        total_carbon_seq = total_biochar * carbon_fraction
+        
+        st.success(f"🌱 Total Biochar Required for Soil Amendment: **{total_biochar:,.2f} kg**")
+        st.info(f"🛡️ Estimated Long-term Carbon Sequestered: **{total_carbon_seq:,.2f} kg** (Based on selected feedstock profile[cite: 1])")
 
-    if mat_choice == "Biochar: Soil Amendment":
-        soil_area = st.number_input("Land Area (sq. m)", min_value=10.0, value=500.0)
-        application_rate = st.number_input("Application Rate (kg/sq. m)", min_value=0.5, value=2.0)
-        total_mat = soil_area * application_rate
-        material_summary_str = f"Biochar Soil Amendment: {total_mat:,.2f} kg"
-        st.success(f"🌱 Total Biochar Required for Soil Amendment: **{total_mat:,.2f} kg**")
+    elif mat_type == "Biochar: Concrete Cement Replacement":
+        conc_vol = st.number_input("Concrete Volume (CFT)", min_value=10.0, value=500.0, step=10.0)
+        replacement_pct = st.slider("Cement Replacement by Biochar (%)", min_value=1.0, max_value=20.0, value=5.0)
+        
+        biochar_weight = conc_vol * 22.0 * (replacement_pct / 100.0)
+        st.success(f"🧱 Biochar Required for Concrete Mix: **{biochar_weight:,.2f} kg**")
 
-    elif mat_choice == "Biochar: Concrete Admixture (Cement Replacement)":
-        concrete_vol = st.number_input("Total Concrete Volume (CFT)", min_value=10.0, value=1000.0)
-        replacement_pct = st.slider("Cement Replacement by Biochar (%)", 1, 15, 5)
-        total_mat = concrete_vol * 22.0 * (replacement_pct / 100.0)
-        material_summary_str = f"Biochar Cement Replacement ({replacement_pct}%): {total_mat:,.2f} kg"
-        st.success(f"🏗️ Biochar Needed to Replace Cement: **{total_mat:,.2f} kg**")
+    elif mat_type == "Recycled Concrete Aggregate (RCA)":
+        total_conc = st.number_input("Total Concrete Volume Required (CFT)", min_value=50.0, value=1000.0, step=50.0)
+        rca_pct = st.slider("RCA Replacement Percentage (%)", min_value=10.0, max_value=100.0, value=30.0)
+        
+        rca_volume = total_conc * 0.75 * (rca_pct / 100.0)
+        st.success(f"♻️ Recycled Concrete Aggregate (RCA) Needed: **{rca_volume:,.2f} CFT**")
 
-    elif mat_choice == "Recycled Aggregate (RCA) in Concrete":
-        total_concrete_cft = st.number_input("Total Concrete Volume (CFT)", min_value=10.0, value=1500.0)
-        rca_pct = st.slider("Coarse Aggregate Replacement by RCA (%)", 10, 100, 30, 5)
-        # Approx 1 CFT concrete contains roughly 45-50 lbs or ~0.75 CFT of coarse aggregate
-        rca_volume = total_concrete_cft * 0.75 * (rca_pct / 100.0)
-        material_summary_str = f"Recycled Aggregate ({rca_pct}% replacement): {rca_volume:,.2f} CFT"
-        st.success(f"♻️ Required Recycled Coarse Aggregate (RCA): **{rca_volume:,.2f} CFT**")
-
-    elif mat_choice == "Fly Ash / SCM Supplementary Cement":
-        total_cement_bags = st.number_input("Total Standard Cement Bags (50kg/bag)", min_value=10, value=200)
-        scm_pct = st.slider("Cement Substitution by Fly Ash / Slag (%)", 10, 40, 25, 5)
-        total_scm_kg = total_cement_bags * 50.0 * (scm_pct / 100.0)
-        material_summary_str = f"Fly Ash / SCM Substitution ({scm_pct}%): {total_scm_kg:,.2f} kg"
-        st.success(f"🏭 Supplementary Cementitious Material (Fly Ash/Slag) Needed: **{total_scm_kg:,.2f} kg**")
+    elif mat_type == "Fly Ash / SCM Replacement":
+        cement_bags = st.number_input("Total Cement Bags (50 kg/bag)", min_value=10, value=100, step=5)
+        scm_pct = st.slider("SCM / Fly Ash Replacement (%)", min_value=10.0, max_value=50.0, value=25.0)
+        
+        total_cement_kg = cement_bags * 50.0
+        fly_ash_weight = total_cement_kg * (scm_pct / 100.0)
+        st.success(f"🏭 Fly Ash / SCM Required: **{fly_ash_weight:,.2f} kg**")
 
     st.session_state["material_summary"] = material_summary_str
 
