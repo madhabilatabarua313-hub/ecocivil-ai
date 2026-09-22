@@ -1,6 +1,11 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib import colors
+import io
 
 # 1. Page Configuration
 st.set_page_config(
@@ -8,6 +13,51 @@ st.set_page_config(
     page_icon="🌱",
     layout="wide"
 )
+
+# Helper function to generate PDF Report
+def generate_master_pdf(engineer, project, loc, harvest_liters, tank_liters, biochar_amt, wastewater, solid_waste, solar_kw, solar_kwh, green_score):
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
+    story = []
+    styles = getSampleStyleSheet()
+    
+    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=18, textColor=colors.HexColor("#2e7d32"), spaceAfter=10)
+    normal_style = styles['Normal']
+    
+    story.append(Paragraph("🌱 EcoCivil AI - Executive Sustainability Report", title_style))
+    story.append(Spacer(1, 10))
+    
+    meta_text = f"<b>Project Name:</b> {project}<br/><b>Location:</b> {loc}<br/><b>Lead Engineer:</b> {engineer}<br/><b>Date:</b> 2026-09-22"
+    story.append(Paragraph(meta_text, normal_style))
+    story.append(Spacer(1, 15))
+    
+    data = [
+        ["Module / Parameter", "Calculated Metric / Value"],
+        ["Annual Rainwater Harvest Potential", f"{harvest_liters:,.0f} Liters"],
+        ["Recommended Storage Tank Capacity", f"{tank_liters:,.0f} Liters"],
+        ["Sustainable Material / Biochar Requirement", f"{biochar_amt:,.2f} kg"],
+        ["Estimated Daily Wastewater Generation", f"{wastewater:,.0f} Liters/day"],
+        ["Estimated Solid Waste Generation", f"{solid_waste:,.1f} kg/day"],
+        ["Rooftop Solar PV Capacity", f"{solar_kw:,.2f} kWp"],
+        ["Daily Solar Energy Generation", f"{solar_kwh:,.2f} kWh (Units/day)"],
+        ["Green Building Pre-Assessment Score", f"{green_score} / 50 Points"]
+    ]
+    
+    t = Table(data, colWidths=[250, 260])
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#e8f5e9")),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.HexColor("#1b5e20")),
+        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('BOTTOMPADDING', (0,0), (-1,0), 8),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#c8e6c9")),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor("#f1f8e9")])
+    ]))
+    
+    story.append(t)
+    doc.build(story)
+    buffer.seek(0)
+    return buffer.getvalue()
 
 # 2. Sidebar Navigation & Meta
 st.sidebar.title("🌱 EcoCivil AI")
@@ -21,7 +71,8 @@ navigation = st.sidebar.radio(
         "Biochar & Sustainable Materials",
         "Wastewater & Waste Estimator",
         "Solar & Renewable Energy",
-        "Green Building Pre-Assessment"
+        "Green Building Pre-Assessment",
+        "Master Executive Report"
     ]
 )
 
@@ -45,7 +96,7 @@ if navigation == "Home / Dashboard":
     """)
     
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Active Modules", "5 Tools", "Online")
+    col1.metric("Active Modules", "6 Tools", "Online")
     col2.metric("Standards", "BNBC & LEED", "Compliant")
     col3.metric("Calculation Engine", "Vectorized", "Active")
     col4.metric("Platform Status", "Stable", "Secure")
@@ -68,6 +119,9 @@ elif navigation == "Rainwater Harvesting Design":
 
     annual_harvest_liters = roof_area * 0.0929 * annual_rainfall * runoff_coef
     storage_tank_liters = (annual_harvest_liters / 365) * demand_days
+
+    st.session_state["harvest_liters"] = annual_harvest_liters
+    st.session_state["tank_liters"] = storage_tank_liters
 
     st.markdown("---")
     st.subheader("📊 Harvesting Results")
@@ -92,8 +146,10 @@ elif navigation == "Biochar & Sustainable Materials":
     else:
         concrete_vol = st.number_input("Total Concrete Volume (CFT)", min_value=10.0, value=1000.0)
         replacement_pct = st.slider("Cement Replacement by Biochar (%)", 1, 15, 5)
-        biochar_weight = concrete_vol * 22.0 * (replacement_pct / 100.0)
-        st.success(f"🏗️ Biochar Needed to Replace Cement: **{biochar_weight:,.2f} kg**")
+        total_biochar = concrete_vol * 22.0 * (replacement_pct / 100.0)
+        st.success(f"🏗️ Biochar Needed to Replace Cement: **{total_biochar:,.2f} kg**")
+    
+    st.session_state["biochar_amt"] = total_biochar
 
 # ----------------------------------------------------
 # MODULE 4: WASTEWATER & WASTE ESTIMATOR
@@ -106,6 +162,9 @@ elif navigation == "Wastewater & Waste Estimator":
     
     wastewater_gen = population * per_capita_water * 0.80 
     solid_waste_gen = population * 0.5 
+
+    st.session_state["wastewater"] = wastewater_gen
+    st.session_state["solid_waste"] = solid_waste_gen
     
     st.markdown("---")
     w_col1, w_col2 = st.columns(2)
@@ -127,9 +186,11 @@ elif navigation == "Solar & Renewable Energy":
         panel_efficiency = st.slider("Solar Panel Efficiency (%)", 15, 25, 20)
         system_loss = st.slider("System Losses / Inverter Efficiency (%)", 10, 25, 15)
 
-    # Calculation: 1 kW requires approx 100 sq ft. Power = Area * efficiency * sun hours
     installed_capacity_kw = usable_roof_area / 100.0 * (panel_efficiency / 20.0)
     daily_energy_kwh = installed_capacity_kw * sun_hours * (1 - system_loss / 100.0)
+
+    st.session_state["solar_kw"] = installed_capacity_kw
+    st.session_state["solar_kwh"] = daily_energy_kwh
 
     st.markdown("---")
     sc1, sc2 = st.columns(2)
@@ -140,7 +201,7 @@ elif navigation == "Solar & Renewable Energy":
 # MODULE 6: GREEN BUILDING PRE-ASSESSMENT
 # ----------------------------------------------------
 elif navigation == "Green Building Pre-Assessment":
-    st.header(" rating checklist & Pre-Assessment")
+    st.header("Rating Checklist & Pre-Assessment")
     st.markdown("Evaluate your project's readiness for green building certification based on sustainable criteria.")
 
     score = 0
@@ -162,6 +223,8 @@ elif navigation == "Green Building Pre-Assessment":
     c5 = st.checkbox("Proper solid waste management & composting unit (+10 pts)")
     if c5: score += 10
 
+    st.session_state["green_score"] = score
+
     st.markdown("---")
     st.metric("Total Green Building Score", f"{score} / {max_score} Points")
     if score >= 40:
@@ -170,3 +233,31 @@ elif navigation == "Green Building Pre-Assessment":
         st.info("👍 Rating: Gold Class Project Potential.")
     else:
         st.warning("⚠️ Rating: Needs more sustainable infrastructure integration.")
+
+# ----------------------------------------------------
+# MODULE 7: MASTER EXECUTIVE REPORT
+# ----------------------------------------------------
+elif navigation == "Master Executive Report":
+    st.header("📄 Master Executive Report & PDF Export")
+    st.markdown("Compile all modular computations into a comprehensive professional PDF engineering report.")
+
+    # Fallbacks if modules weren't visited
+    h_liters = st.session_state.get("harvest_liters", 394825.0)
+    t_liters = st.session_state.get("tank_liters", 32451.0)
+    b_amt = st.session_state.get("biochar_amt", 1000.0)
+    w_water = st.session_state.get("wastewater", 38400.0)
+    s_waste = st.session_state.get("solid_waste", 150.0)
+    s_kw = st.session_state.get("solar_kw", 10.0)
+    s_kwh = st.session_state.get("solar_kwh", 42.5)
+    g_score = st.session_state.get("green_score", 40)
+
+    st.info("Click the button below to generate and download the complete project summary report in PDF format.")
+    
+    pdf_bytes = generate_master_pdf(engineer_name, project_name, location, h_liters, t_liters, b_amt, w_water, s_waste, s_kw, s_kwh, g_score)
+    
+    st.download_button(
+        label="📥 Download Master Executive PDF Report",
+        data=pdf_bytes,
+        file_name=f"EcoCivil_AI_Report_{project_name.replace(' ', '_')}.pdf",
+        mime="application/pdf"
+    )
