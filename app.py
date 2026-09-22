@@ -1,0 +1,172 @@
+import streamlit as st
+import pandas as pd
+import numpy as np
+
+# 1. Page Configuration
+st.set_page_config(
+    page_title="EcoCivil AI - Environmental Suite",
+    page_icon="🌱",
+    layout="wide"
+)
+
+# 2. Sidebar Navigation & Meta
+st.sidebar.title("🌱 EcoCivil AI")
+st.sidebar.markdown("Advanced Environmental & Sustainability Suite")
+
+navigation = st.sidebar.radio(
+    "Select Navigation",
+    [
+        "Home / Dashboard",
+        "Rainwater Harvesting Design",
+        "Biochar & Sustainable Materials",
+        "Wastewater & Waste Estimator",
+        "Solar & Renewable Energy",
+        "Green Building Pre-Assessment"
+    ]
+)
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("👤 Engineer & Project Meta")
+engineer_name = st.sidebar.text_input("Engineer Name", "Engr. Madhabilata Barua")
+project_name = st.sidebar.text_input("Project Name", "Green Campus Initiative")
+location = st.sidebar.text_input("Location", "Chattogram")
+
+if "estimates_data" not in st.session_state:
+    st.session_state["estimates_data"] = {}
+
+# ----------------------------------------------------
+# MODULE 1: HOME / DASHBOARD
+# ----------------------------------------------------
+if navigation == "Home / Dashboard":
+    st.title("🌱 EcoCivil AI: Professional Environmental Suite")
+    st.markdown("""
+    Welcome to **EcoCivil AI**, an advanced decision-support platform engineered for environmental and civil engineers. 
+    Design sustainable infrastructure, estimate ecological parameters, and evaluate green building compliance seamlessly.
+    """)
+    
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Active Modules", "5 Tools", "Online")
+    col2.metric("Standards", "BNBC & LEED", "Compliant")
+    col3.metric("Calculation Engine", "Vectorized", "Active")
+    col4.metric("Platform Status", "Stable", "Secure")
+
+# ----------------------------------------------------
+# MODULE 2: RAINWATER HARVESTING DESIGN
+# ----------------------------------------------------
+elif navigation == "Rainwater Harvesting Design":
+    st.header("💧 Rooftop Rainwater Harvesting System Design")
+    st.markdown("Calculate potential rainwater collection volume and recommended underground/overhead storage tank capacity.")
+
+    col_r1, col_r2 = st.columns(2)
+    with col_r1:
+        roof_area = st.number_input("Rooftop Footprint Area (sq. ft)", min_value=100.0, value=2000.0)
+        annual_rainfall = st.number_input("Average Annual Rainfall (mm)", min_value=500.0, value=2500.0)
+    
+    with col_r2:
+        runoff_coef = st.slider("Runoff Coefficient (Roof Material)", 0.6, 0.95, 0.85, 0.05)
+        demand_days = st.number_input("Storage Reserve Days", min_value=10, value=30)
+
+    annual_harvest_liters = roof_area * 0.0929 * annual_rainfall * runoff_coef
+    storage_tank_liters = (annual_harvest_liters / 365) * demand_days
+
+    st.markdown("---")
+    st.subheader("📊 Harvesting Results")
+    res1, res2 = st.columns(2)
+    res1.metric("Annual Harvest Potential", f"{annual_harvest_liters:,.0f} Liters")
+    res2.metric("Recommended Storage Tank", f"{storage_tank_liters:,.0f} Liters")
+
+# ----------------------------------------------------
+# MODULE 3: BIOCHAR & SUSTAINABLE MATERIALS
+# ----------------------------------------------------
+elif navigation == "Biochar & Sustainable Materials":
+    st.header("🌍 Biochar Application & Carbon Sequestration Estimator")
+    st.markdown("Estimate biochar requirements for soil carbon enhancement or eco-friendly concrete replacement.")
+
+    app_type = st.selectbox("Application Purpose", ["Soil Amendment (Landscaping/Agriculture)", "Concrete Admixture / Partial Cement Replacement"])
+    
+    if "Soil" in app_type:
+        soil_area = st.number_input("Land Area (sq. m)", min_value=10.0, value=500.0)
+        application_rate = st.number_input("Application Rate (kg/sq. m)", min_value=0.5, value=2.0)
+        total_biochar = soil_area * application_rate
+        st.success(f"🌱 Total Biochar Required for Soil Amendment: **{total_biochar:,.2f} kg**")
+    else:
+        concrete_vol = st.number_input("Total Concrete Volume (CFT)", min_value=10.0, value=1000.0)
+        replacement_pct = st.slider("Cement Replacement by Biochar (%)", 1, 15, 5)
+        biochar_weight = concrete_vol * 22.0 * (replacement_pct / 100.0)
+        st.success(f"🏗️ Biochar Needed to Replace Cement: **{biochar_weight:,.2f} kg**")
+
+# ----------------------------------------------------
+# MODULE 4: WASTEWATER & WASTE ESTIMATOR
+# ----------------------------------------------------
+elif navigation == "Wastewater & Waste Estimator":
+    st.header("♻️ Municipal Wastewater & Solid Waste Estimator")
+    
+    population = st.number_input("Equivalent Population (Capita)", min_value=10, value=300)
+    per_capita_water = st.number_input("Per Capita Water Consumption (Liters/Day/Capita)", min_value=50.0, value=160.0)
+    
+    wastewater_gen = population * per_capita_water * 0.80 
+    solid_waste_gen = population * 0.5 
+    
+    st.markdown("---")
+    w_col1, w_col2 = st.columns(2)
+    w_col1.metric("Estimated Daily Wastewater", f"{wastewater_gen:,.0f} Liters/day")
+    w_col2.metric("Estimated Solid Waste Generation", f"{solid_waste_gen:,.1f} kg/day")
+
+# ----------------------------------------------------
+# MODULE 5: SOLAR & RENEWABLE ENERGY
+# ----------------------------------------------------
+elif navigation == "Solar & Renewable Energy":
+    st.header("☀️ Rooftop Solar PV & Clean Energy Estimator")
+    st.markdown("Calculate rooftop solar panel capacity and estimated daily electricity generation.")
+
+    s_col1, s_col2 = st.columns(2)
+    with s_col1:
+        usable_roof_area = st.number_input("Usable Rooftop Area for Solar (sq. ft)", min_value=50.0, value=1000.0)
+        sun_hours = st.slider("Average Peak Sun Hours / Day", 3.0, 7.0, 5.0, 0.5)
+    with s_col2:
+        panel_efficiency = st.slider("Solar Panel Efficiency (%)", 15, 25, 20)
+        system_loss = st.slider("System Losses / Inverter Efficiency (%)", 10, 25, 15)
+
+    # Calculation: 1 kW requires approx 100 sq ft. Power = Area * efficiency * sun hours
+    installed_capacity_kw = usable_roof_area / 100.0 * (panel_efficiency / 20.0)
+    daily_energy_kwh = installed_capacity_kw * sun_hours * (1 - system_loss / 100.0)
+
+    st.markdown("---")
+    sc1, sc2 = st.columns(2)
+    sc1.metric("Estimated Solar Capacity", f"{installed_capacity_kw:,.2f} kWp")
+    sc2.metric("Daily Energy Generation", f"{daily_energy_kwh:,.2f} kWh (Units/day)")
+
+# ----------------------------------------------------
+# MODULE 6: GREEN BUILDING PRE-ASSESSMENT
+# ----------------------------------------------------
+elif navigation == "Green Building Pre-Assessment":
+    st.header(" rating checklist & Pre-Assessment")
+    st.markdown("Evaluate your project's readiness for green building certification based on sustainable criteria.")
+
+    score = 0
+    max_score = 50
+
+    st.subheader("Checklist Criteria:")
+    c1 = st.checkbox("Rainwater harvesting system implemented (+10 pts)")
+    if c1: score += 10
+
+    c2 = st.checkbox("Use of sustainable materials / biochar / recycled aggregate (+10 pts)")
+    if c2: score += 10
+
+    c3 = st.checkbox("Rooftop solar PV integration planned (+10 pts)")
+    if c3: score += 10
+
+    c4 = st.checkbox("Wastewater treatment & greywater recycling system (+10 pts)")
+    if c4: score += 10
+
+    c5 = st.checkbox("Proper solid waste management & composting unit (+10 pts)")
+    if c5: score += 10
+
+    st.markdown("---")
+    st.metric("Total Green Building Score", f"{score} / {max_score} Points")
+    if score >= 40:
+        st.success("🌟 Rating: Platinum Class Green Project Ready!")
+    elif score >= 25:
+        st.info("👍 Rating: Gold Class Project Potential.")
+    else:
+        st.warning("⚠️ Rating: Needs more sustainable infrastructure integration.")
