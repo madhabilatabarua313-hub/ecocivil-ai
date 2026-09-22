@@ -15,7 +15,7 @@ st.set_page_config(
 )
 
 # Helper function to generate PDF Report
-def generate_master_pdf(engineer, project, loc, harvest_liters, tank_liters, biochar_amt, wastewater, solid_waste, solar_kw, solar_kwh, green_score):
+def generate_master_pdf(engineer, project, loc, harvest_liters, tank_liters, material_summary, wastewater, solid_waste, solar_kw, solar_kwh, green_score):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
     story = []
@@ -35,7 +35,7 @@ def generate_master_pdf(engineer, project, loc, harvest_liters, tank_liters, bio
         ["Module / Parameter", "Calculated Metric / Value"],
         ["Annual Rainwater Harvest Potential", f"{harvest_liters:,.0f} Liters"],
         ["Recommended Storage Tank Capacity", f"{tank_liters:,.0f} Liters"],
-        ["Sustainable Material / Biochar Requirement", f"{biochar_amt:,.2f} kg"],
+        ["Sustainable Material Estimation", material_summary],
         ["Estimated Daily Wastewater Generation", f"{wastewater:,.0f} Liters/day"],
         ["Estimated Solid Waste Generation", f"{solid_waste:,.1f} kg/day"],
         ["Rooftop Solar PV Capacity", f"{solar_kw:,.2f} kWp"],
@@ -43,7 +43,7 @@ def generate_master_pdf(engineer, project, loc, harvest_liters, tank_liters, bio
         ["Green Building Pre-Assessment Score", f"{green_score} / 50 Points"]
     ]
     
-    t = Table(data, colWidths=[250, 260])
+    t = Table(data, colWidths=[230, 280])
     t.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#e8f5e9")),
         ('TEXTCOLOR', (0,0), (-1,0), colors.HexColor("#1b5e20")),
@@ -133,23 +133,51 @@ elif navigation == "Rainwater Harvesting Design":
 # MODULE 3: BIOCHAR & SUSTAINABLE MATERIALS
 # ----------------------------------------------------
 elif navigation == "Biochar & Sustainable Materials":
-    st.header("🌍 Biochar Application & Carbon Sequestration Estimator")
-    st.markdown("Estimate biochar requirements for soil carbon enhancement or eco-friendly concrete replacement.")
+    st.header("🌍 Sustainable Construction Materials & Carbon Sequestration")
+    st.markdown("Estimate quantities for biochar applications, recycled coarse aggregates, and supplementary cementitious materials.")
 
-    app_type = st.selectbox("Application Purpose", ["Soil Amendment (Landscaping/Agriculture)", "Concrete Admixture / Partial Cement Replacement"])
+    mat_choice = st.selectbox(
+        "Select Sustainable Material Estimator", 
+        [
+            "Biochar: Soil Amendment", 
+            "Biochar: Concrete Admixture (Cement Replacement)", 
+            "Recycled Aggregate (RCA) in Concrete", 
+            "Fly Ash / SCM Supplementary Cement"
+        ]
+    )
     
-    if "Soil" in app_type:
+    material_summary_str = ""
+
+    if mat_choice == "Biochar: Soil Amendment":
         soil_area = st.number_input("Land Area (sq. m)", min_value=10.0, value=500.0)
         application_rate = st.number_input("Application Rate (kg/sq. m)", min_value=0.5, value=2.0)
-        total_biochar = soil_area * application_rate
-        st.success(f"🌱 Total Biochar Required for Soil Amendment: **{total_biochar:,.2f} kg**")
-    else:
+        total_mat = soil_area * application_rate
+        material_summary_str = f"Biochar Soil Amendment: {total_mat:,.2f} kg"
+        st.success(f"🌱 Total Biochar Required for Soil Amendment: **{total_mat:,.2f} kg**")
+
+    elif mat_choice == "Biochar: Concrete Admixture (Cement Replacement)":
         concrete_vol = st.number_input("Total Concrete Volume (CFT)", min_value=10.0, value=1000.0)
         replacement_pct = st.slider("Cement Replacement by Biochar (%)", 1, 15, 5)
-        total_biochar = concrete_vol * 22.0 * (replacement_pct / 100.0)
-        st.success(f"🏗️ Biochar Needed to Replace Cement: **{total_biochar:,.2f} kg**")
-    
-    st.session_state["biochar_amt"] = total_biochar
+        total_mat = concrete_vol * 22.0 * (replacement_pct / 100.0)
+        material_summary_str = f"Biochar Cement Replacement ({replacement_pct}%): {total_mat:,.2f} kg"
+        st.success(f"🏗️ Biochar Needed to Replace Cement: **{total_mat:,.2f} kg**")
+
+    elif mat_choice == "Recycled Aggregate (RCA) in Concrete":
+        total_concrete_cft = st.number_input("Total Concrete Volume (CFT)", min_value=10.0, value=1500.0)
+        rca_pct = st.slider("Coarse Aggregate Replacement by RCA (%)", 10, 100, 30, 5)
+        # Approx 1 CFT concrete contains roughly 45-50 lbs or ~0.75 CFT of coarse aggregate
+        rca_volume = total_concrete_cft * 0.75 * (rca_pct / 100.0)
+        material_summary_str = f"Recycled Aggregate ({rca_pct}% replacement): {rca_volume:,.2f} CFT"
+        st.success(f"♻️ Required Recycled Coarse Aggregate (RCA): **{rca_volume:,.2f} CFT**")
+
+    elif mat_choice == "Fly Ash / SCM Supplementary Cement":
+        total_cement_bags = st.number_input("Total Standard Cement Bags (50kg/bag)", min_value=10, value=200)
+        scm_pct = st.slider("Cement Substitution by Fly Ash / Slag (%)", 10, 40, 25, 5)
+        total_scm_kg = total_cement_bags * 50.0 * (scm_pct / 100.0)
+        material_summary_str = f"Fly Ash / SCM Substitution ({scm_pct}%): {total_scm_kg:,.2f} kg"
+        st.success(f"🏭 Supplementary Cementitious Material (Fly Ash/Slag) Needed: **{total_scm_kg:,.2f} kg**")
+
+    st.session_state["material_summary"] = material_summary_str
 
 # ----------------------------------------------------
 # MODULE 4: WASTEWATER & WASTE ESTIMATOR
@@ -241,10 +269,9 @@ elif navigation == "Master Executive Report":
     st.header("📄 Master Executive Report & PDF Export")
     st.markdown("Compile all modular computations into a comprehensive professional PDF engineering report.")
 
-    # Fallbacks if modules weren't visited
     h_liters = st.session_state.get("harvest_liters", 394825.0)
     t_liters = st.session_state.get("tank_liters", 32451.0)
-    b_amt = st.session_state.get("biochar_amt", 1000.0)
+    mat_summary = st.session_state.get("material_summary", "Biochar Soil Amendment: 1,000.00 kg")
     w_water = st.session_state.get("wastewater", 38400.0)
     s_waste = st.session_state.get("solid_waste", 150.0)
     s_kw = st.session_state.get("solar_kw", 10.0)
@@ -253,7 +280,7 @@ elif navigation == "Master Executive Report":
 
     st.info("Click the button below to generate and download the complete project summary report in PDF format.")
     
-    pdf_bytes = generate_master_pdf(engineer_name, project_name, location, h_liters, t_liters, b_amt, w_water, s_waste, s_kw, s_kwh, g_score)
+    pdf_bytes = generate_master_pdf(engineer_name, project_name, location, h_liters, t_liters, mat_summary, w_water, s_waste, s_kw, s_kwh, g_score)
     
     st.download_button(
         label="📥 Download Master Executive PDF Report",
